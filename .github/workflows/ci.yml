@@ -9,33 +9,37 @@
 name: ci
 
 on:
-  pull_request:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
 
 permissions:
   contents: read
-  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# ── Job: Secret scanning ──────────────────────────────────────────────────────
 jobs:
+
+# ── Secret scan ───────────────────────────────────────────────────────────────
   secret-scan:
-    name: Secret scan (gitleaks)
+    name: Secret scan (trufflehog)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: TruffleHog scan
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: ${{ github.event.repository.default_branch }}
+          head: HEAD
+          extra_args: --only-verified
 
-# ── Job: Dependency audit ─────────────────────────────────────────────────────
+# ── Dependency audit ──────────────────────────────────────────────────────────
   dependency-audit:
     name: Dependency audit (pip-audit)
     runs-on: ubuntu-latest
@@ -44,19 +48,16 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
-      - name: Install pip-audit
-        run: pip install pip-audit
-      - name: Audit dependencies
-        # Skips gracefully if requirements.txt does not exist yet (Phase 1)
+      - name: Run pip-audit
         run: |
+          pip install pip-audit
           if [ -f requirements.txt ]; then
             pip-audit -r requirements.txt --strict
           else
-            echo "No requirements.txt yet — skipping audit (Phase 1)"
+            echo "No requirements.txt yet — skipping (Phase 1)"
           fi
 
-# ── Job: Lint & type-check ────────────────────────────────────────────────────
+# ── Lint & type-check ─────────────────────────────────────────────────────────
   lint:
     name: Lint & type-check (ruff + mypy)
     runs-on: ubuntu-latest
@@ -68,24 +69,22 @@ jobs:
           cache: pip
       - name: Install linters
         run: pip install ruff mypy
-      - name: Ruff lint
-        # Skips gracefully if app/ does not exist yet (Phase 1)
+      - name: Ruff
         run: |
           if [ -d app ]; then
-            ruff check app/
-            ruff format --check app/
+            ruff check app/ && ruff format --check app/
           else
-            echo "No app/ directory yet — skipping lint (Phase 1)"
+            echo "No app/ yet — skipping (Phase 1)"
           fi
-      - name: Mypy type-check
+      - name: Mypy
         run: |
           if [ -d app ]; then
             mypy app/ --strict
           else
-            echo "No app/ directory yet — skipping mypy (Phase 1)"
+            echo "No app/ yet — skipping (Phase 1)"
           fi
 
-# ── Job: Tests ────────────────────────────────────────────────────────────────
+# ── Tests ─────────────────────────────────────────────────────────────────────
   test:
     name: Tests (pytest)
     runs-on: ubuntu-latest
@@ -111,15 +110,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-      - name: Install dependencies
+      - name: Install test dependencies
         run: |
-          if [ -f requirements.txt ] && [ -f requirements-dev.txt ]; then
-            pip install -r requirements.txt -r requirements-dev.txt
+          if [ -f requirements-dev.txt ]; then
+            pip install -r requirements-dev.txt
           else
             pip install pytest pytest-cov pyyaml hypothesis
           fi
-      - name: Run spec static tests
-        # Always runs — validates spec files are internally consistent
+      - name: Run tests
         env:
           DATABASE_URL: postgresql+asyncpg://ss:test@localhost:5432/ss_test
           REDIS_URL: redis://localhost:6379/0
@@ -127,28 +125,25 @@ jobs:
           if [ -d tests ]; then
             pytest tests/ -q --tb=short
           else
-            echo "No tests/ directory yet — Phase 1 spec-only mode"
+            echo "No tests/ yet — Phase 1 spec-only mode"
           fi
 
-# ── Job: Build image ──────────────────────────────────────────────────────────
+# ── Build image ───────────────────────────────────────────────────────────────
   build:
-    name: Build Docker image
+    name: Build & scan Docker image
     runs-on: ubuntu-latest
     needs: [lint, test, secret-scan, dependency-audit]
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
       - name: Build app image
-        # Skips gracefully if Dockerfile does not exist yet (Phase 1)
         run: |
           if [ -f app/Dockerfile ]; then
             docker buildx build ./app \
               --tag sorcerers-stone/app:ci \
-              --load \
-              --cache-from type=gha \
-              --cache-to type=gha,mode=max
+              --load
           else
-            echo "No Dockerfile yet — skipping image build (Phase 1)"
+            echo "No Dockerfile yet — skipping (Phase 1)"
           fi
       - name: Trivy image scan
         if: hashFiles('app/Dockerfile') != ''
@@ -159,22 +154,19 @@ jobs:
           exit-code: "1"
           ignore-unfixed: true
 
-# ── Job: Kiro spec review (PR only, advisory) ─────────────────────────────────
+# ── Kiro spec review (PR advisory) ───────────────────────────────────────────
   kiro-review:
-    name: Kiro spec/code review
+    name: Kiro spec review (advisory)
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
       - uses: actions/checkout@v4
-      - name: Kiro CLI review
-        run: |
-          # Wire up Kiro CLI once installed — advisory gate only
-          # kiro review --spec .kiro/specs/ --diff origin/main...HEAD
-          echo "Kiro CLI review placeholder — wire per installed version"
+      - name: Kiro CLI placeholder
+        run: echo "Kiro CLI review — wire per installed version (Phase 7)"
 
-# ── Job: Scan summary (required status check name for branch protection) ───────
+# ── Scan gate (required status check for branch protection) ───────────────────
   scan:
-    name: Scan summary
+    name: Scan gate
     runs-on: ubuntu-latest
     needs: [secret-scan, dependency-audit]
     steps:

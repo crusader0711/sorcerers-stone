@@ -2,7 +2,7 @@
 # Ref: .kiro/specs/phase-1-architecture/tasks.md Task 1.7
 #
 # Stage progression:
-#   Phase 1 (now):  secret-scan, dependency-audit, lint (no-op), spec-tests, build (no-op)
+#   Phase 1 (now):  secret-scan, dependency-audit, lint (no-op), test (no-op), build (no-op)
 #   Phase 2+:       lint enforced, unit/integration tests, coverage gate
 #   Phase 6+:       build-image, Trivy scan, GHCR push on tag
 
@@ -64,7 +64,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
+          # No cache: pip here — no requirements file exists yet in Phase 1
       - name: Install linters
         run: pip install ruff mypy
       - name: Ruff lint
@@ -72,14 +72,14 @@ jobs:
           if [ -d app ]; then
             ruff check app/ && ruff format --check app/
           else
-            echo "No app/ yet — skipping (Phase 1)"
+            echo "No app/ yet — skipping lint (Phase 1)"
           fi
       - name: Mypy type-check
         run: |
           if [ -d app ]; then
             mypy app/ --strict
           else
-            echo "No app/ yet — skipping (Phase 1)"
+            echo "No app/ yet — skipping mypy (Phase 1)"
           fi
 
 # ── Tests ─────────────────────────────────────────────────────────────────────
@@ -107,7 +107,7 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
-          cache: pip
+          # No cache: pip — no requirements file exists yet in Phase 1
       - name: Install test dependencies
         run: |
           if [ -f requirements-dev.txt ]; then

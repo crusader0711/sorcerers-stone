@@ -70,6 +70,7 @@ def create_app() -> FastAPI:
         link,
         imports,
         admin,
+        export,
     )
 
     # Internal (no auth required)
@@ -92,5 +93,8 @@ def create_app() -> FastAPI:
 
     # Admin (Phase 3)
     app.include_router(admin.router)
+
+    # Export (Phase 5)
+    app.include_router(export.router)
 
     return app

@@ -2,7 +2,7 @@
 # Ref: .kiro/specs/phase-1-architecture/tasks.md Task 1.7
 #
 # Stage progression:
-#   Phase 1 (now):  secret-scan, dependency-audit, lint (no-op), spec-tests
+#   Phase 1 (now):  secret-scan, dependency-audit, lint (no-op), spec-tests, build (no-op)
 #   Phase 2+:       lint enforced, unit/integration tests, coverage gate
 #   Phase 6+:       build-image, Trivy scan, GHCR push on tag
 
@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  security-events: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -25,19 +26,16 @@ jobs:
 
 # ── Secret scan ───────────────────────────────────────────────────────────────
   secret-scan:
-    name: Secret scan (trufflehog)
+    name: Secret scan (gitleaks)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: TruffleHog scan
-        uses: trufflesecurity/trufflehog@main
-        with:
-          path: ./
-          base: ${{ github.event.repository.default_branch }}
-          head: HEAD
-          extra_args: --only-verified
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # ── Dependency audit ──────────────────────────────────────────────────────────
   dependency-audit:
@@ -69,14 +67,14 @@ jobs:
           cache: pip
       - name: Install linters
         run: pip install ruff mypy
-      - name: Ruff
+      - name: Ruff lint
         run: |
           if [ -d app ]; then
             ruff check app/ && ruff format --check app/
           else
             echo "No app/ yet — skipping (Phase 1)"
           fi
-      - name: Mypy
+      - name: Mypy type-check
         run: |
           if [ -d app ]; then
             mypy app/ --strict
@@ -128,7 +126,7 @@ jobs:
             echo "No tests/ yet — Phase 1 spec-only mode"
           fi
 
-# ── Build image ───────────────────────────────────────────────────────────────
+# ── Build & scan image ────────────────────────────────────────────────────────
   build:
     name: Build & scan Docker image
     runs-on: ubuntu-latest

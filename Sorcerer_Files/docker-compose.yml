@@ -1,0 +1,127 @@
+# The Sorcerer's Stone — UNRAID Docker Compose (Phase 1 scaffold)
+# Place under /mnt/user/appdata/sorcerers-stone/ (encrypted share).
+# Only the reverse proxy publishes a port; everything else is on the internal bridge.
+
+name: sorcerers-stone
+
+networks:
+  ss-internal:
+    driver: bridge
+    internal: false   # app needs egress to Plaid/AWS; restrict via OPNsense VLAN rules
+  ss-edge:
+    driver: bridge
+
+volumes:
+  pgdata:
+  redisdata:
+  caddydata:
+
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  app_secret_key:
+    file: ./secrets/app_secret_key.txt      # session signing
+  field_enc_key:
+    file: ./secrets/field_enc_key.txt       # AES-256-GCM key for token fields
+  plaid_client_id:
+    file: ./secrets/plaid_client_id.txt
+  plaid_secret:
+    file: ./secrets/plaid_secret.txt
+  aws_backup_creds:
+    file: ./secrets/aws_backup_creds.txt    # scoped IAM user, S3 prefix only
+  age_recipient:
+    file: ./secrets/age_recipient.txt       # public key; private key stored offline
+
+services:
+  proxy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    networks: [ss-edge, ss-internal]
+    ports:
+      - "8443:8443"            # LAN/VPN only — do NOT port-forward on OPNsense
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+    security_opt: ["no-new-privileges:true"]
+
+  app:
+    build: ./app               # FastAPI + Jinja2 + HTMX
+    restart: unless-stopped
+    networks: [ss-internal]
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ss_app@db:5432/sorcerers_stone
+      REDIS_URL: redis://redis:6379/0
+      PLAID_ENV: sandbox       # sandbox -> development -> production
+      APP_ENV: production
+    secrets: [db_password, app_secret_key, field_enc_key, plaid_client_id, plaid_secret]
+    read_only: true
+    tmpfs: ["/tmp"]
+    user: "1000:1000"
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/healthz')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  worker:
+    build: ./app
+    command: ["python", "-m", "app.worker"]   # APScheduler: syncs + backup trigger
+    restart: unless-stopped
+    networks: [ss-internal]
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      DATABASE_URL: postgresql+asyncpg://ss_app@db:5432/sorcerers_stone
+      REDIS_URL: redis://redis:6379/0
+      PLAID_ENV: sandbox
+    secrets: [db_password, field_enc_key, plaid_client_id, plaid_secret]
+    read_only: true
+    tmpfs: ["/tmp"]
+    user: "1000:1000"
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    networks: [ss-internal]
+    environment:
+      POSTGRES_DB: sorcerers_stone
+      POSTGRES_USER: ss_app
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+    secrets: [db_password]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    security_opt: ["no-new-privileges:true"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ss_app -d sorcerers_stone"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    networks: [ss-internal]
+    command: ["redis-server", "--save", "", "--appendonly", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redisdata:/data
+    security_opt: ["no-new-privileges:true"]
+
+  backup:
+    image: ghcr.io/<org>/ss-backup:latest   # thin image: pg_dump + age + aws-cli/rclone
+    restart: unless-stopped
+    networks: [ss-internal]
+    depends_on:
+      db: { condition: service_healthy }
+    environment:
+      S3_URI: s3://<backup-bucket>/sorcerers-stone/
+      SCHEDULE: "0 2 * * *"                 # nightly 0200 local
+    secrets: [db_password, aws_backup_creds, age_recipient]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]

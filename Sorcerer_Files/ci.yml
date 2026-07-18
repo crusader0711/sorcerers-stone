@@ -1,0 +1,107 @@
+# The Sorcerer's Stone — CI Pipeline (Phase 1 skeleton)
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint-and-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install ruff mypy
+      - run: ruff check app/ && ruff format --check app/
+      - run: mypy app/ --strict
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env: { POSTGRES_DB: ss_test, POSTGRES_USER: ss, POSTGRES_PASSWORD: test }
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ss" --health-interval 10s
+          --health-timeout 5s --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt -r requirements-dev.txt
+      - name: Unit + property-based + integration tests
+        env:
+          DATABASE_URL: postgresql+asyncpg://ss:test@localhost:5432/ss_test
+          REDIS_URL: redis://localhost:6379/0
+          PLAID_ENV: sandbox
+        run: pytest -q --cov=app --cov-fail-under=80
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12" }
+      - run: pip install pip-audit && pip-audit -r requirements.txt
+
+  kiro-review:
+    # Kiro CLI headless review of spec/code drift — advisory gate
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kiro spec/code review
+        run: |
+          # Placeholder: install Kiro CLI per current docs, then e.g.
+          # kiro review --spec specs/ --diff origin/main...HEAD --report kiro-report.md
+          echo "Kiro CLI review step — wire up per installed version"
+      # - uses: actions/upload-artifact@v4
+      #   with: { name: kiro-report, path: kiro-report.md }
+
+  build-image:
+    needs: [lint-and-type, test, secret-scan, dependency-audit]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build app image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          push: false
+          load: true
+          tags: sorcerers-stone/app:ci
+      - name: Trivy image scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: sorcerers-stone/app:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+  # deploy job (Phase 6): tag-triggered, pushes image to GHCR;
+  # UNRAID pulls via watchtower-style updater or ssh compose pull/up script.

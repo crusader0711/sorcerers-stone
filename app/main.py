@@ -3,7 +3,7 @@
 Ref: .kiro/specs/phase-1-architecture/design.md §4.1
 
 Creates the app instance with middleware, routers, and startup/shutdown hooks.
-All configuration via Settings (pydantic-settings → Docker secrets in production).
+All configuration via Settings (pydantic-settings -> Docker secrets in production).
 """
 
 from contextlib import asynccontextmanager
@@ -11,6 +11,7 @@ from collections.abc import AsyncGenerator
 
 from fastapi import FastAPI
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.settings import settings
 from app.logging_config import configure_logging
@@ -49,6 +50,9 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # ── Static files (locally served — no CDN per INV-1/REQ-DASH-3) ──────────
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
+
     # ── Middleware ────────────────────────────────────────────────────────────
     app.add_middleware(
         TrustedHostMiddleware,
@@ -56,9 +60,37 @@ def create_app() -> FastAPI:
     )
 
     # ── Routers ───────────────────────────────────────────────────────────────
-    from app.routers import internal, auth
+    from app.routers import (
+        internal,
+        auth,
+        dashboard,
+        accounts,
+        transactions,
+        investments,
+        link,
+        imports,
+        admin,
+    )
 
+    # Internal (no auth required)
     app.include_router(internal.router)
+
+    # Auth
     app.include_router(auth.router)
+
+    # Dashboard views (Phase 4)
+    app.include_router(dashboard.router)
+    app.include_router(accounts.router)
+    app.include_router(transactions.router)
+    app.include_router(investments.router)
+
+    # Plaid Link (Phase 3)
+    app.include_router(link.router)
+
+    # CSV Import (Phase 3)
+    app.include_router(imports.router)
+
+    # Admin (Phase 3)
+    app.include_router(admin.router)
 
     return app

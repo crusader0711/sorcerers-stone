@@ -13,39 +13,72 @@
 
 **Depends on:** —
 **Deliverable:** Private GitHub repo `sorcerers-stone` with protected `main` branch
+**Status:** NEARLY COMPLETE — branch protection and secret scanning require manual GitHub UI steps (see below)
 
 ### Steps
 - [x] Create private GitHub repo `crusader0711/sorcerers-stone`
 - [x] Initialize local git repo; set `main` as default branch
 - [x] Add `.gitignore` (Python, secrets, IDE, Docker, Terraform)
 - [x] Add `.gitattributes` (LF normalization for all text files)
-- [ ] Enable branch protection on `main`: require PR + green CI, no force-push
-- [ ] Enable Dependabot (dependency version updates + security alerts)
-- [ ] Enable GitHub secret scanning
+- [x] Add `.github/dependabot.yml` — pip weekly + Actions weekly
+- [ ] Enable branch protection on `main` — see instructions below
+- [ ] Enable GitHub secret scanning — see instructions below
+
+### Branch Protection Setup (manual — GitHub UI)
+
+Go to **https://github.com/crusader0711/sorcerers-stone/settings/branches** → **Add rule**:
+
+| Setting | Value |
+|---|---|
+| Branch name pattern | `main` |
+| Require a pull request before merging | ✅ |
+| Required approvals | 1 (or 0 for solo workflow — your choice) |
+| Require status checks to pass before merging | ✅ |
+| Required status checks | `lint`, `test`, `build`, `scan` (add once CI is green — Task 1.7) |
+| Require branches to be up to date before merging | ✅ |
+| Do not allow bypassing the above settings | ✅ |
+| Allow force pushes | ❌ |
+| Allow deletions | ❌ |
+
+> **Note:** The required status check names (`lint`, `test`, `build`, `scan`) must match
+> the `jobs:` keys in `.github/workflows/ci.yml` exactly. Wire these after Task 1.7 completes.
+
+### Secret Scanning Setup (manual — GitHub UI)
+
+Go to **https://github.com/crusader0711/sorcerers-stone/settings/security_analysis**:
+
+| Setting | Action |
+|---|---|
+| Secret scanning | Enable |
+| Push protection | Enable (blocks pushes containing detected secrets) |
+| Dependabot alerts | Enable (auto-enabled when dependabot.yml is present) |
+| Dependabot security updates | Enable |
 
 ### Acceptance Criteria
-- Direct push to `main` is rejected by GitHub
-- Dependabot config file exists at `.github/dependabot.yml`
-- Secret scanning is active (verified in repo Security tab)
+- [x] Dependabot config file exists at `.github/dependabot.yml`
+- [ ] Direct push to `main` is rejected by GitHub (after branch protection rule is saved)
+- [ ] Secret scanning is active (verified in repo Security tab)
 
 ---
 
 ## Task 1.2 — Commit Spec & Scaffold Artifacts
 
 **Depends on:** 1.1
-**Deliverable:** Versioned spec artifacts committed and pushed to `main` via PR
+**Deliverable:** Versioned spec artifacts committed and pushed to `main`
+**Status:** COMPLETE
 
 ### Steps
 - [x] Commit `Sorcerer_Files/PHASE1_ARCHITECTURE_SPEC.md`
 - [x] Commit `Sorcerer_Files/PROJECT_SPEC.md`
 - [x] Commit `Sorcerer_Files/ENGINEERING_BUILD_GUIDE.md`
 - [x] Commit `Sorcerer_Files/ci.yml` and `Sorcerer_Files/docker-compose.yml`
-- [ ] Create `SECURITY.md` skeleton (responsible disclosure, invariant list, rotation runbook stubs)
-- [ ] Create `docs/ARCHITECTURE.md` skeleton (links to Mermaid diagrams in PHASE1 spec)
+- [x] Create `SECURITY.md` — disclosure policy, INV-1..6, secret inventory, 5 runbook stubs, controls matrix
+- [x] Create `docs/ARCHITECTURE.md` — system context, data flows (Mermaid), ERD, API surface, phase map
 
 ### Acceptance Criteria
-- All four scaffold artifacts present in repo root / Sorcerer_Files
-- `SECURITY.md` lists INV-1..6 and has placeholder runbook headings
+- [x] All four scaffold artifacts present in `Sorcerer_Files/`
+- [x] `SECURITY.md` lists INV-1..6 with status and full runbook stubs
+- [x] `docs/ARCHITECTURE.md` contains Mermaid diagrams linking to PHASE1 spec
 
 ---
 
@@ -53,6 +86,7 @@
 
 **Depends on:** 1.2
 **Deliverable:** `.kiro/specs/phase-1-architecture/requirements.md`
+**Status:** COMPLETE
 
 ### Steps
 - [x] Expand §1 EARS stubs into full requirements covering every §4 API endpoint
@@ -61,9 +95,9 @@
 - [x] Verify every requirement has at least one testable acceptance criterion
 
 ### Acceptance Criteria
-- Every endpoint in the §4 API table has ≥ 1 requirement
-- Every requirement references a EARS pattern and acceptance criterion
-- All six invariants (INV-1..6) are covered by at least one requirement
+- [x] Every endpoint in the §4 API table has ≥ 1 requirement
+- [x] Every requirement references an EARS pattern and acceptance criterion
+- [x] All six invariants (INV-1..6) are covered by at least one requirement
 
 ### Property-Based Test Stubs
 ```python
@@ -105,6 +139,7 @@ def test_every_req_has_acceptance_criterion():
 
 **Depends on:** 1.3
 **Deliverable:** `.kiro/specs/phase-1-architecture/design.md`
+**Status:** COMPLETE
 
 ### Steps
 - [x] Document system context and deployment topology (§1)
@@ -119,9 +154,9 @@ def test_every_req_has_acceptance_criterion():
 - [x] Security invariant enforcement summary table (§10)
 
 ### Acceptance Criteria
-- Every INV-1..6 has an explicit enforcing control named in design.md §10
-- Crypto module design matches: nonce-per-record, AAD = record UUID, key from Docker secret
-- DB role design includes `REVOKE UPDATE, DELETE ON audit_log FROM app_role`
+- [x] Every INV-1..6 has an explicit enforcing control named in design.md §10
+- [x] Crypto module: nonce-per-record, AAD = record UUID, key from Docker secret
+- [x] DB role design includes `REVOKE UPDATE, DELETE ON audit_log FROM app_role`
 
 ---
 
@@ -129,11 +164,12 @@ def test_every_req_has_acceptance_criterion():
 
 **Depends on:** 1.4
 **Deliverable:** `.kiro/specs/phase-1-architecture/tasks.md` (this file)
+**Status:** COMPLETE (Phase 2 spec to be created after Phase 1 sign-off)
 
 ### Steps
 - [x] Map Phase 1 task table (1.1–1.9) to detailed task definitions
 - [x] Add acceptance criteria and property-based test stubs per task
-- [ ] After Phase 1 sign-off: create `specs/phase-2-tasks.md`
+- [ ] After Phase 1 sign-off: create `.kiro/specs/phase-2-backend-core/` spec
 
 ### Phase 2 Preview
 | # | Task | Key Output |
@@ -154,12 +190,13 @@ def test_every_req_has_acceptance_criterion():
 
 **Depends on:** 1.4
 **Deliverable:** Running stack on UNRAID dev share (app stub + Postgres + Redis)
+**Status:** PENDING
 
 ### Steps
-- [ ] Finalize `docker-compose.yml` with all six services
+- [ ] Finalize `infra/docker-compose.yml` with all six services
 - [ ] Apply container hardening (non-root, read-only rootfs, cap_drop, no-new-privileges)
-- [ ] Create `infra/Caddyfile` with TLS 1.3 config and security headers
-- [ ] Create Docker secrets: `field_enc_key`, `session_secret`, `database_url`
+- [ ] Create `infra/caddy/Caddyfile` with TLS 1.3 config and security headers
+- [ ] Create Docker secrets: `field_enc_key`, `session_secret`, `database_url` (dev values)
 - [ ] Place stack on services VLAN; verify no WAN port-forward
 - [ ] Confirm `docker compose up` brings all services healthy
 
@@ -176,7 +213,7 @@ import yaml, pathlib
 from hypothesis import given, settings
 import hypothesis.strategies as st
 
-COMPOSE = yaml.safe_load(pathlib.Path("docker-compose.yml").read_text())
+COMPOSE = yaml.safe_load(pathlib.Path("infra/docker-compose.yml").read_text())
 HARDENED_SERVICES = ["app", "worker", "backup"]
 
 def test_no_service_exposes_port_except_proxy():
@@ -210,6 +247,7 @@ def test_no_secrets_in_environment():
 
 **Depends on:** 1.1
 **Deliverable:** `.github/workflows/ci.yml` — green on every push to any branch
+**Status:** PENDING
 
 ### Steps
 - [ ] Move/finalize `Sorcerer_Files/ci.yml` → `.github/workflows/ci.yml`
@@ -217,6 +255,7 @@ def test_no_secrets_in_environment():
 - [ ] Add `gitleaks` secret scanning step
 - [ ] Cache pip dependencies between runs
 - [ ] Enforce: all stages must pass before PR merge to `main`
+- [ ] Wire status check names to branch protection rule (Task 1.1)
 
 ### Acceptance Criteria
 - Pipeline runs green on a clean branch with spec files only
@@ -252,19 +291,20 @@ def test_gitleaks_present():
 
 **Depends on:** 1.1
 **Deliverable:** S3 bucket provisioned, access-verified with a test age-encrypted object round-trip
+**Status:** PENDING
 
 ### Steps
 - [ ] Create S3 bucket `sorcerers-stone-backup`; Block Public Access ON; versioning ON
 - [ ] Bucket policy: deny non-TLS; lifecycle Standard→IA(30d)→Glacier(180d)
-- [ ] Scoped IAM user: `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` on prefix only
-- [ ] Generate age keypair; private key offline; public key as Docker secret
-- [ ] Round-trip test: encrypt → S3 upload → download → decrypt → verify
-- [ ] Record ARNs in `PROJECT_SPEC.md` §10
+- [ ] Scoped IAM user: `s3:PutObject`, `s3:GetObject`, `s3:ListBucket` on prefix only — no `DeleteObject`
+- [ ] Generate age keypair; private key offline; public key as Docker secret `age_recipient`
+- [ ] Round-trip test: encrypt → S3 upload → download → decrypt → verify contents match
+- [ ] Record bucket ARN and IAM user ARN in `PROJECT_SPEC.md` §10
 
 ### Acceptance Criteria
-- S3 rejects HTTP PUT with 403
-- IAM user cannot call `s3:DeleteObject`
-- Age round-trip succeeds; no plaintext object in bucket
+- S3 bucket rejects HTTP PUT with 403
+- IAM user cannot call `s3:DeleteObject` (returns AccessDenied)
+- age round-trip succeeds; no plaintext object in bucket after test
 
 ### Property-Based Test Stubs
 ```python
@@ -301,6 +341,7 @@ def test_encrypted_content_is_not_plaintext(plaintext: bytes):
 
 **Depends on:** 1.3, 1.4, 1.5, 1.6, 1.7, 1.8
 **Deliverable:** Updated `PROJECT_SPEC.md` §7 decision log; all six invariants signed off
+**Status:** PENDING
 
 ### Steps
 - [ ] Walk through `PHASE1_ARCHITECTURE_SPEC.md` §0 threat model against `design.md` §10
@@ -318,6 +359,13 @@ def test_encrypted_content_is_not_plaintext(plaintext: bytes):
 | INV-4 | Caddy TLS 1.3 + auth_guard + Redis sessions | Task 1.6, Phase 2 | ☐ |
 | INV-5 | audit_log + REVOKE UPDATE/DELETE + structured logs | Phase 2 (design ready) | ☐ |
 | INV-6 | NormalisedTransaction allow-list + raw_merchant purge | Phase 3 (design ready) | ☐ |
+
+### Phase 1 Exit Criteria
+- [ ] Specs committed (`requirements.md`, `design.md`, `tasks.md`) ✅
+- [ ] Empty-but-running stack on UNRAID (`docker compose ps` all healthy)
+- [ ] Green CI (lint + test + build + scan all passing)
+- [ ] S3 backup target provisioned; test encrypted object round-trip verified
+- [ ] Threat model signed off; all six invariants have enforcing controls in design
 
 ### Property-Based Test Stubs
 ```python

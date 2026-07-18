@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% set active_page = "dashboard" %}
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Net worth headline -->
+    <section aria-label="Net worth summary">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <div class="flex items-baseline justify-between">
+                <div>
+                    <p class="text-sm text-gray-400 uppercase tracking-wide">Net Worth</p>
+                    <p class="mt-1 text-4xl font-bold text-white" id="net-worth-value"
+                       hx-get="/dashboard/partials/net-worth"
+                       hx-trigger="load"
+                       hx-swap="innerHTML">
+                        —
+                    </p>
+                </div>
+                <div class="text-right">
+                    <p class="text-sm text-gray-400">Last updated</p>
+                    <p class="text-sm text-gray-300" id="last-updated">—</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 90-day sparkline -->
+    <section aria-label="Net worth trend">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h2 class="text-lg font-semibold text-white mb-4">90-Day Trend</h2>
+            <div class="h-48"
+                 hx-get="/dashboard/partials/sparkline"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+                <canvas id="sparkline-chart" aria-label="Net worth 90-day sparkline chart"></canvas>
+            </div>
+        </div>
+    </section>
+
+    <!-- Account staleness indicators -->
+    <section aria-label="Connected accounts status">
+        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
+            <h2 class="text-lg font-semibold text-white mb-4">Connected Accounts</h2>
+            <div id="account-status-list"
+                 hx-get="/dashboard/partials/account-status"
+                 hx-trigger="load"
+                 hx-swap="innerHTML">
+                <p class="text-gray-400 text-sm">Loading accounts...</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Quick actions -->
+    <section aria-label="Quick actions" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <button
+            hx-post="/admin/sync/run"
+            hx-target="#sync-result"
+            hx-swap="innerHTML"
+            class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-left"
+        >
+            <p class="font-medium text-white">Sync Now</p>
+            <p class="text-sm text-gray-400 mt-1">Pull latest transactions</p>
+        </button>
+
+        <a href="/import/csv" class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition block">
+            <p class="font-medium text-white">Import CSV</p>
+            <p class="text-sm text-gray-400 mt-1">Upload bank statement</p>
+        </a>
+
+        <a href="/export" class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition block">
+            <p class="font-medium text-white">Export Data</p>
+            <p class="text-sm text-gray-400 mt-1">Full portability bundle</p>
+        </a>
+    </section>
+
+    <div id="sync-result" class="text-sm text-gray-400"></div>
+</div>
+{% endblock %}

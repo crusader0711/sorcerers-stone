@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Dashboard{% endblock %} — Sorcerer's Stone</title>
+
+    <!-- Tailwind CSS (locally served — no CDN per INV-1/REQ-DASH-3) -->
+    <link rel="stylesheet" href="/static/css/tailwind.min.css">
+
+    <!-- App styles -->
+    <link rel="stylesheet" href="/static/css/app.css">
+
+    <!-- HTMX (locally served) -->
+    <script src="/static/js/htmx.min.js" defer></script>
+
+    <!-- Chart.js (locally served — no CDN) -->
+    <script src="/static/js/chart.min.js" defer></script>
+
+    {% block head_extra %}{% endblock %}
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex flex-col">
+
+    <!-- Skip to content (accessibility) -->
+    <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 bg-indigo-600 text-white px-4 py-2 rounded z-50">
+        Skip to content
+    </a>
+
+    {% if not hide_nav %}
+    <!-- Navigation -->
+    <nav class="bg-gray-800 border-b border-gray-700 px-4 py-3" role="navigation" aria-label="Main navigation">
+        <div class="max-w-7xl mx-auto flex items-center justify-between">
+            <!-- Logo / Home -->
+            <a href="/dashboard" class="flex items-center gap-2 text-lg font-semibold text-indigo-400 hover:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                </svg>
+                <span>Sorcerer's Stone</span>
+            </a>
+
+            <!-- Main nav links -->
+            <div class="hidden md:flex items-center gap-6">
+                <a href="/dashboard" class="nav-link {% if active_page == 'dashboard' %}nav-link-active{% endif %}" aria-current="{% if active_page == 'dashboard' %}page{% endif %}">
+                    Dashboard
+                </a>
+                <a href="/accounts" class="nav-link {% if active_page == 'accounts' %}nav-link-active{% endif %}" aria-current="{% if active_page == 'accounts' %}page{% endif %}">
+                    Accounts
+                </a>
+                <a href="/transactions" class="nav-link {% if active_page == 'transactions' %}nav-link-active{% endif %}" aria-current="{% if active_page == 'transactions' %}page{% endif %}">
+                    Transactions
+                </a>
+                <a href="/investments" class="nav-link {% if active_page == 'investments' %}nav-link-active{% endif %}" aria-current="{% if active_page == 'investments' %}page{% endif %}">
+                    Investments
+                </a>
+            </div>
+
+            <!-- User menu -->
+            <div class="flex items-center gap-4">
+                <button id="dark-mode-toggle" class="p-2 rounded hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-500" aria-label="Toggle dark mode">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/></svg>
+                </button>
+                <form action="/auth/logout" method="post">
+                    <button type="submit" class="text-sm text-gray-400 hover:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1">
+                        Logout
+                    </button>
+                </form>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <!-- Main content -->
+    <main id="main-content" class="flex-1 max-w-7xl mx-auto w-full px-4 py-6" role="main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-gray-800 border-t border-gray-700 px-4 py-3 text-center text-xs text-gray-500">
+        Sorcerer's Stone v0.1.0 · Self-hosted · <span id="last-sync">—</span>
+    </footer>
+
+    <!-- Dark mode toggle script (inline — no external dependency) -->
+    <script>
+        const toggle = document.getElementById('dark-mode-toggle');
+        if (toggle) {
+            toggle.addEventListener('click', () => {
+                document.documentElement.classList.toggle('dark');
+                localStorage.setItem('theme',
+                    document.documentElement.classList.contains('dark') ? 'dark' : 'light'
+                );
+            });
+            // Restore preference
+            if (localStorage.getItem('theme') === 'light') {
+                document.documentElement.classList.remove('dark');
+            }
+        }
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

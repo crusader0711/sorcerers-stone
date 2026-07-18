@@ -1,0 +1,181 @@
+# The Sorcerer's Stone — CI Pipeline
+# Ref: .kiro/specs/phase-1-architecture/tasks.md Task 1.7
+#
+# Stage progression:
+#   Phase 1 (now):  secret-scan, dependency-audit, lint (no-op), spec-tests
+#   Phase 2+:       lint enforced, unit/integration tests, coverage gate
+#   Phase 6+:       build-image, Trivy scan, GHCR push on tag
+
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# ── Job: Secret scanning ──────────────────────────────────────────────────────
+jobs:
+  secret-scan:
+    name: Secret scan (gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+# ── Job: Dependency audit ─────────────────────────────────────────────────────
+  dependency-audit:
+    name: Dependency audit (pip-audit)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install pip-audit
+        run: pip install pip-audit
+      - name: Audit dependencies
+        # Skips gracefully if requirements.txt does not exist yet (Phase 1)
+        run: |
+          if [ -f requirements.txt ]; then
+            pip-audit -r requirements.txt --strict
+          else
+            echo "No requirements.txt yet — skipping audit (Phase 1)"
+          fi
+
+# ── Job: Lint & type-check ────────────────────────────────────────────────────
+  lint:
+    name: Lint & type-check (ruff + mypy)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install linters
+        run: pip install ruff mypy
+      - name: Ruff lint
+        # Skips gracefully if app/ does not exist yet (Phase 1)
+        run: |
+          if [ -d app ]; then
+            ruff check app/
+            ruff format --check app/
+          else
+            echo "No app/ directory yet — skipping lint (Phase 1)"
+          fi
+      - name: Mypy type-check
+        run: |
+          if [ -d app ]; then
+            mypy app/ --strict
+          else
+            echo "No app/ directory yet — skipping mypy (Phase 1)"
+          fi
+
+# ── Job: Tests ────────────────────────────────────────────────────────────────
+  test:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: ss_test
+          POSTGRES_USER: ss
+          POSTGRES_PASSWORD: test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U ss"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports: ["6379:6379"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install dependencies
+        run: |
+          if [ -f requirements.txt ] && [ -f requirements-dev.txt ]; then
+            pip install -r requirements.txt -r requirements-dev.txt
+          else
+            pip install pytest pytest-cov pyyaml hypothesis
+          fi
+      - name: Run spec static tests
+        # Always runs — validates spec files are internally consistent
+        env:
+          DATABASE_URL: postgresql+asyncpg://ss:test@localhost:5432/ss_test
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          if [ -d tests ]; then
+            pytest tests/ -q --tb=short
+          else
+            echo "No tests/ directory yet — Phase 1 spec-only mode"
+          fi
+
+# ── Job: Build image ──────────────────────────────────────────────────────────
+  build:
+    name: Build Docker image
+    runs-on: ubuntu-latest
+    needs: [lint, test, secret-scan, dependency-audit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build app image
+        # Skips gracefully if Dockerfile does not exist yet (Phase 1)
+        run: |
+          if [ -f app/Dockerfile ]; then
+            docker buildx build ./app \
+              --tag sorcerers-stone/app:ci \
+              --load \
+              --cache-from type=gha \
+              --cache-to type=gha,mode=max
+          else
+            echo "No Dockerfile yet — skipping image build (Phase 1)"
+          fi
+      - name: Trivy image scan
+        if: hashFiles('app/Dockerfile') != ''
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: sorcerers-stone/app:ci
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: true
+
+# ── Job: Kiro spec review (PR only, advisory) ─────────────────────────────────
+  kiro-review:
+    name: Kiro spec/code review
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Kiro CLI review
+        run: |
+          # Wire up Kiro CLI once installed — advisory gate only
+          # kiro review --spec .kiro/specs/ --diff origin/main...HEAD
+          echo "Kiro CLI review placeholder — wire per installed version"
+
+# ── Job: Scan summary (required status check name for branch protection) ───────
+  scan:
+    name: Scan summary
+    runs-on: ubuntu-latest
+    needs: [secret-scan, dependency-audit]
+    steps:
+      - run: echo "All scan jobs passed"

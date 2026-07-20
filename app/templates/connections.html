@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% set active_page = "connections" %}
+{% block title %}Connections{% endblock %}
+{% block page_title %}Connections{% endblock %}
+
+{% block head_extra %}
+<!-- Plaid Link SDK (only external script — required by Plaid, loads their Link UI) -->
+<script src="https://cdn.plaid.com/link/v2/stable/link-initialize.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-lg font-semibold text-white">Connections</h1>
+            <p class="text-xs text-gray-500 mt-0.5">Linked financial institutions · Plaid read-only (INV-2)</p>
+        </div>
+        <button
+            id="link-btn"
+            onclick="openPlaidLink()"
+            class="text-xs bg-gradient-to-r from-amber-600 to-orange-700 hover:from-amber-500 hover:to-orange-600 text-white font-medium rounded px-3 py-1.5 transition shadow"
+        >
+            + Link account
+        </button>
+    </div>
+
+    <!-- Connected items list -->
+    <section class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+        <h2 class="text-sm font-semibold text-white mb-4">Linked institutions</h2>
+        <div id="connections-list" hx-get="/connections/partials/list" hx-trigger="load" hx-swap="innerHTML">
+            <p class="text-xs text-gray-500">Loading connections...</p>
+        </div>
+    </section>
+
+    <!-- Link status / result -->
+    <div id="link-result" class="text-sm"></div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+/**
+ * Plaid Link integration — The Sorcerer's Stone
+ *
+ * Flow:
+ *   1. User clicks "Link account"
+ *   2. Frontend requests a link_token from our backend (POST /link/plaid/token)
+ *   3. Plaid Link UI opens with that token
+ *   4. User authenticates with their bank inside Plaid's UI (credentials never touch us — INV-2)
+ *   5. On success, Plaid returns a public_token to our callback
+ *   6. We send public_token to our backend (POST /link/plaid/exchange)
+ *   7. Backend exchanges for access_token, encrypts it (INV-3), stores in DB
+ *   8. UI refreshes the connections list
+ */
+
+async function openPlaidLink() {
+    const btn = document.getElementById('link-btn');
+    const resultDiv = document.getElementById('link-result');
+    btn.disabled = true;
+    btn.textContent = 'Initializing...';
+    resultDiv.innerHTML = '';
+
+    try {
+        // Step 1: Get link_token from our backend
+        const tokenResp = await fetch('/link/plaid/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!tokenResp.ok) {
+            throw new Error(`Failed to create link token: ${tokenResp.status}`);
+        }
+
+        const { link_token } = await tokenResp.json();
+
+        // Step 2: Open Plaid Link
+        const handler = Plaid.create({
+            token: link_token,
+            onSuccess: async (public_token, metadata) => {
+                // Step 3: Exchange public_token via our backend
+                resultDiv.innerHTML = '<p class="text-amber-400 text-xs">Linking account...</p>';
+
+                const exchangeResp = await fetch('/link/plaid/exchange', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ public_token: public_token }),
+                });
+
+                if (exchangeResp.ok) {
+                    const data = await exchangeResp.json();
+                    resultDiv.innerHTML = `
+                        <div class="bg-emerald-900/30 border border-emerald-700 text-emerald-300 px-4 py-2.5 rounded text-sm mt-4">
+                            Account linked successfully (${metadata.institution?.name || 'institution'})
+                        </div>
+                    `;
+                    // Refresh connections list
+                    htmx.trigger('#connections-list', 'load');
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2.5 rounded text-sm mt-4">
+                            Failed to link account. Try again.
+                        </div>
+                    `;
+                }
+            },
+            onExit: (err, metadata) => {
+                if (err) {
+                    console.error('Plaid Link error:', err);
+                    resultDiv.innerHTML = `
+                        <div class="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2.5 rounded text-sm mt-4">
+                            Link cancelled or errored: ${err.display_message || err.error_code || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            },
+            onEvent: (eventName, metadata) => {
+                // Optional: log events for debugging
+                console.log('Plaid event:', eventName);
+            },
+        });
+
+        handler.open();
+
+    } catch (error) {
+        resultDiv.innerHTML = `
+            <div class="bg-red-900/30 border border-red-700 text-red-300 px-4 py-2.5 rounded text-sm mt-4">
+                Error: ${error.message}
+            </div>
+        `;
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '+ Link account';
+    }
+}
+</script>
+{% endblock %}

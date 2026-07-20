@@ -1,58 +1,112 @@
-/* app.css — The Sorcerer's Stone custom styles
+/* app.css — The Sorcerer's Stone · Forge theme
    Extends Tailwind with project-specific utilities */
 
-/* Navigation links */
-.nav-link {
-    @apply text-sm text-gray-300 hover:text-white px-3 py-2 rounded-md
-           focus:outline-none focus:ring-2 focus:ring-indigo-500 transition;
+/* ═══ Sidebar navigation ══════════════════════════════════════════════════════ */
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    font-size: 0.8125rem;
+    color: #9ca3af;
+    transition: all 150ms;
+}
+.sidebar-link:hover {
+    color: #f3f4f6;
+    background-color: rgba(255, 255, 255, 0.04);
+}
+.sidebar-link:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 1px;
+}
+.sidebar-link-active {
+    color: #ffffff;
+    background-color: rgba(99, 102, 241, 0.12);
+    border-left: 2px solid #6366f1;
+    margin-left: -2px;
 }
 
-.nav-link-active {
-    @apply text-white bg-gray-700;
-}
-
-/* Card hover state */
-.hover\:bg-gray-750:hover {
-    background-color: rgb(42, 48, 60);
-}
-
-/* Financial numbers */
-.amount-positive { color: #34d399; }
-.amount-negative { color: #f87171; }
-
-/* Staleness indicators */
-.stale-badge {
-    @apply inline-flex items-center px-2 py-0.5 rounded text-xs font-medium;
-}
-.stale-badge-ok {
-    @apply bg-green-900/50 text-green-300;
-}
-.stale-badge-warn {
-    @apply bg-yellow-900/50 text-yellow-300;
-}
-.stale-badge-error {
-    @apply bg-red-900/50 text-red-300;
-}
-
-/* Table styles */
+/* ═══ Data table ══════════════════════════════════════════════════════════════ */
 .data-table {
-    @apply w-full text-sm text-left;
+    width: 100%;
+    font-size: 0.75rem;
+    text-align: left;
 }
 .data-table thead {
-    @apply text-xs text-gray-400 uppercase bg-gray-800;
+    font-size: 0.6875rem;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background-color: rgba(31, 41, 55, 0.5);
 }
 .data-table th {
-    @apply px-4 py-3;
+    padding: 0.625rem 1rem;
+    font-weight: 500;
 }
 .data-table td {
-    @apply px-4 py-3 border-t border-gray-700;
+    padding: 0.625rem 1rem;
+    border-top: 1px solid rgba(55, 65, 81, 0.5);
+    color: #d1d5db;
 }
 .data-table tbody tr:hover {
-    @apply bg-gray-800/50;
+    background-color: rgba(255, 255, 255, 0.02);
 }
 
-/* Focus visible for keyboard navigation */
+/* ═══ Financial number colors ═════════════════════════════════════════════════ */
+.amount-positive { color: #34d399; }
+.amount-negative { color: #f87171; }
+.amount-neutral { color: #d1d5db; }
+
+/* ═══ Staleness / status badges ═══════════════════════════════════════════════ */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    font-size: 0.6875rem;
+    font-weight: 500;
+}
+.badge-ok { background-color: rgba(16, 185, 129, 0.1); color: #34d399; }
+.badge-warn { background-color: rgba(245, 158, 11, 0.1); color: #fbbf24; }
+.badge-error { background-color: rgba(239, 68, 68, 0.1); color: #f87171; }
+.badge-info { background-color: rgba(99, 102, 241, 0.1); color: #818cf8; }
+
+/* ═══ KPI card hover ══════════════════════════════════════════════════════════ */
+.bg-\[#1a1d27\]:hover {
+    border-color: rgba(99, 102, 241, 0.3);
+}
+
+/* ═══ Progress bars ═══════════════════════════════════════════════════════════ */
+.progress-bar {
+    height: 0.5rem;
+    background-color: #374151;
+    border-radius: 9999px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    border-radius: 9999px;
+    transition: width 300ms ease;
+}
+
+/* ═══ Focus visible for keyboard navigation ═══════════════════════════════════ */
 :focus-visible {
     outline: 2px solid #6366f1;
     outline-offset: 2px;
+}
+
+/* ═══ Scrollbar styling (dark theme) ══════════════════════════════════════════ */
+::-webkit-scrollbar {
+    width: 6px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
 }

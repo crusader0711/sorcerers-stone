@@ -1,0 +1,129 @@
+{% extends "base.html" %}
+{% set active_page = "risk" %}
+{% block title %}Risk & Coverage{% endblock %}
+{% block page_title %}Risk & coverage{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-lg font-semibold text-white">Risk & coverage</h1>
+            <p class="text-xs text-gray-500 mt-0.5">Credit posture, bureau security, and insurance coverage vs. what you actually own</p>
+        </div>
+        <button class="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2.5 py-1 hover:border-gray-500 transition">+ Add policy</button>
+    </div>
+
+    <!-- ═══ KPI Cards ═════════════════════════════════════════════════════════ -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Score · Ty</p>
+            <p class="text-xl font-bold text-emerald-400">812</p>
+            <p class="text-[11px] text-gray-400 mt-1">+9 · FICO 8 · Experian</p>
+        </div>
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Score · spouse</p>
+            <p class="text-xl font-bold text-emerald-400">798</p>
+            <p class="text-[11px] text-gray-400 mt-1">+4 · FICO 8 · Equifax</p>
+        </div>
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Bureaus frozen</p>
+            <p class="text-xl font-bold text-amber-400">2 / 3</p>
+            <p class="text-[11px] text-amber-400 mt-1">TransUnion thawed · 4d</p>
+        </div>
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Coverage gaps</p>
+            <p class="text-xl font-bold text-red-400">1</p>
+            <p class="text-[11px] text-gray-400 mt-1">6 policies active</p>
+        </div>
+    </section>
+
+    <!-- ═══ Credit Score History + Bureau Security ═════════════════════════════ -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <!-- Score history chart -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-white">Credit score history</h2>
+                <div class="flex gap-2 text-[10px]">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>Ty</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-pink-500"></span>Spouse</span>
+                </div>
+            </div>
+            <p class="text-[11px] text-gray-500 mb-3">Manual entries + report imports · alert threshold ±20 pts (REQ-K2)</p>
+            <div class="h-48 bg-gray-800/30 rounded flex items-center justify-center">
+                <canvas id="score-chart" aria-label="Credit score history chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Bureau security -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5 space-y-4">
+            <h2 class="text-sm font-semibold text-white">Bureau security</h2>
+            <div hx-get="/risk/partials/bureau-status" hx-trigger="load" hx-swap="innerHTML">
+                <p class="text-xs text-gray-500">Loading bureau status...</p>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-medium text-gray-400 mt-4 mb-2">Recent alerts</h3>
+                <div hx-get="/risk/partials/alerts" hx-trigger="load" hx-swap="innerHTML">
+                    <p class="text-xs text-gray-500">No alerts</p>
+                </div>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ═══ Coverage Gap Analysis ═════════════════════════════════════════════ -->
+    <section class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+        <h2 class="text-sm font-semibold text-white mb-1">Coverage gap analysis</h2>
+        <p class="text-[11px] text-gray-500 mb-5">Liability vs. net worth · dwelling vs. valuation · every owned asset accounted for (REQ-K11/K12)</p>
+
+        <div class="space-y-4">
+            <!-- Umbrella -->
+            <div class="bg-gray-800/30 rounded-lg p-4 border border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs text-gray-400">Umbrella + underlying liability vs. net worth</p>
+                    <span class="text-xs text-emerald-400 font-mono">$1.0M / $634.7k ✓</span>
+                </div>
+                <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-2">Coverage exceeds net worth · re-check at $900k NW</p>
+            </div>
+
+            <!-- Dwelling -->
+            <div class="bg-gray-800/30 rounded-lg p-4 border border-gray-700">
+                <div class="flex items-center justify-between mb-2">
+                    <p class="text-xs text-gray-400">Dwelling coverage vs. residence valuation</p>
+                    <span class="text-xs text-emerald-400 font-mono">$520k / $485k ✓</span>
+                </div>
+                <div class="h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div class="h-full bg-emerald-500 rounded-full" style="width: 100%"></div>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-2">107% of valuation · above 80% replacement-cost floor</p>
+            </div>
+
+            <!-- Per-asset coverage -->
+            <div class="bg-gray-800/30 rounded-lg p-4 border border-gray-700">
+                <p class="text-xs text-gray-400 mb-3">Per-asset coverage</p>
+                <div hx-get="/risk/partials/asset-coverage" hx-trigger="load" hx-swap="innerHTML">
+                    <p class="text-xs text-gray-500">Loading coverage data...</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ═══ Insurance Policies ════════════════════════════════════════════════ -->
+    <section class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+        <div class="mb-4">
+            <h2 class="text-sm font-semibold text-white">Insurance policies</h2>
+            <p class="text-[11px] text-gray-500 mt-0.5">Premiums feed the obligations engine · renewal lead 30d (REQ-K9)</p>
+        </div>
+        <div hx-get="/risk/partials/policies" hx-trigger="load" hx-swap="innerHTML">
+            <p class="text-xs text-gray-500">Loading policies...</p>
+        </div>
+    </section>
+
+</div>
+{% endblock %}

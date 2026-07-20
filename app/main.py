@@ -65,6 +65,7 @@ def create_app() -> FastAPI:
         liabilities,
         assets,
         risk,
+        connections,
     )
 
     # Internal (no auth)
@@ -86,6 +87,7 @@ def create_app() -> FastAPI:
     app.include_router(export.router)
 
     # Forge
+    app.include_router(connections.router)
     app.include_router(link.router)
     app.include_router(imports.router)
     app.include_router(admin.router)

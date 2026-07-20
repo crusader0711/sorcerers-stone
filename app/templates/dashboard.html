@@ -1,79 +1,121 @@
 {% extends "base.html" %}
-{% set active_page = "dashboard" %}
-{% block title %}Dashboard{% endblock %}
+{% set active_page = "overview" %}
+{% block title %}Overview{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
-    <!-- Net worth headline -->
-    <section aria-label="Net worth summary">
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <div class="flex items-baseline justify-between">
+
+    <!-- ═══ Net Worth Hero ═════════════════════════════════════════════════════ -->
+    <section class="bg-[#1a1d27] rounded-xl border border-gray-800 p-6">
+        <div class="flex items-start justify-between">
+            <div>
+                <p class="text-xs text-gray-500 uppercase tracking-wider mb-1">Net worth · all holdings</p>
+                <p class="text-4xl font-bold text-white leading-none"
+                   hx-get="/dashboard/partials/net-worth"
+                   hx-trigger="load"
+                   hx-swap="innerHTML">
+                    $0.00
+                </p>
+                <p class="mt-2 text-sm">
+                    <span class="text-emerald-400">▲ +$0</span>
+                    <span class="text-gray-500">(+0% · 90d)</span>
+                </p>
+            </div>
+            <div class="flex gap-2 text-[11px]">
+                <button class="px-2.5 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition">30d</button>
+                <button class="px-2.5 py-1 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-700">90d</button>
+                <button class="px-2.5 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition">1y</button>
+                <button class="px-2.5 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition">All</button>
+            </div>
+        </div>
+
+        <!-- Sparkline chart area -->
+        <div class="mt-4 h-32" hx-get="/dashboard/partials/sparkline" hx-trigger="load" hx-swap="innerHTML">
+            <canvas id="nw-sparkline" aria-label="Net worth 90-day sparkline"></canvas>
+        </div>
+    </section>
+
+    <!-- ═══ KPI Cards ═════════════════════════════════════════════════════════ -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <!-- Cash & deposits -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Cash & deposits</p>
+            <p class="text-xl font-bold text-white" hx-get="/dashboard/partials/kpi/cash" hx-trigger="load" hx-swap="innerHTML">$0</p>
+            <p class="text-[11px] text-emerald-400 mt-1">+0% mo</p>
+        </div>
+
+        <!-- Investments -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Investments</p>
+            <p class="text-xl font-bold text-white" hx-get="/dashboard/partials/kpi/investments" hx-trigger="load" hx-swap="innerHTML">$0</p>
+            <p class="text-[11px] text-emerald-400 mt-1">+0% mo</p>
+        </div>
+
+        <!-- Property & assets -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Property & assets</p>
+            <p class="text-xl font-bold text-white" hx-get="/dashboard/partials/kpi/assets" hx-trigger="load" hx-swap="innerHTML">$0</p>
+            <p class="text-[11px] text-gray-400 mt-1">manual · —</p>
+        </div>
+
+        <!-- Liabilities -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Liabilities</p>
+            <p class="text-xl font-bold text-red-400" hx-get="/dashboard/partials/kpi/liabilities" hx-trigger="load" hx-swap="innerHTML">−$0</p>
+            <p class="text-[11px] text-red-400 mt-1">−$0 mo</p>
+        </div>
+
+    </section>
+
+    <!-- ═══ Bottom row: Obligations + Cash Flow ═══════════════════════════════ -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <!-- Upcoming obligations -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <div class="flex items-center justify-between mb-4">
                 <div>
-                    <p class="text-sm text-gray-400 uppercase tracking-wide">Net Worth</p>
-                    <p class="mt-1 text-4xl font-bold text-white" id="net-worth-value"
-                       hx-get="/dashboard/partials/net-worth"
-                       hx-trigger="load"
-                       hx-swap="innerHTML">
-                        —
-                    </p>
-                </div>
-                <div class="text-right">
-                    <p class="text-sm text-gray-400">Last updated</p>
-                    <p class="text-sm text-gray-300" id="last-updated">—</p>
+                    <h2 class="text-sm font-semibold text-white">Upcoming obligations</h2>
+                    <p class="text-[11px] text-gray-500 mt-0.5">Due this month <span class="text-amber-400 font-medium" hx-get="/dashboard/partials/obligations-total" hx-trigger="load" hx-swap="innerHTML">$0</span></p>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- 90-day sparkline -->
-    <section aria-label="Net worth trend">
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h2 class="text-lg font-semibold text-white mb-4">90-Day Trend</h2>
-            <div class="h-48"
-                 hx-get="/dashboard/partials/sparkline"
-                 hx-trigger="load"
-                 hx-swap="innerHTML">
-                <canvas id="sparkline-chart" aria-label="Net worth 90-day sparkline chart"></canvas>
+            <div hx-get="/dashboard/partials/obligations-list" hx-trigger="load" hx-swap="innerHTML">
+                <p class="text-gray-500 text-xs">Loading obligations...</p>
             </div>
         </div>
-    </section>
 
-    <!-- Account staleness indicators -->
-    <section aria-label="Connected accounts status">
-        <div class="bg-gray-800 rounded-lg p-6 border border-gray-700">
-            <h2 class="text-lg font-semibold text-white mb-4">Connected Accounts</h2>
-            <div id="account-status-list"
-                 hx-get="/dashboard/partials/account-status"
-                 hx-trigger="load"
-                 hx-swap="innerHTML">
-                <p class="text-gray-400 text-sm">Loading accounts...</p>
+        <!-- Cash flow this month -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <h2 class="text-sm font-semibold text-white mb-4">Cash flow · <span class="text-gray-400">{{ current_month }}</span></h2>
+
+            <!-- Mini bar chart placeholder -->
+            <div class="h-24 mb-4" hx-get="/dashboard/partials/cashflow-chart" hx-trigger="load" hx-swap="innerHTML">
+                <div class="h-full bg-gray-800/50 rounded flex items-center justify-center text-xs text-gray-500">Chart loads after first sync</div>
+            </div>
+
+            <!-- Cash flow stats -->
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Income</span>
+                    <span class="text-white font-medium" hx-get="/dashboard/partials/cashflow/income" hx-trigger="load" hx-swap="innerHTML">$0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Spending MTD</span>
+                    <span class="text-white font-medium" hx-get="/dashboard/partials/cashflow/spending" hx-trigger="load" hx-swap="innerHTML">$0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Net</span>
+                    <span class="text-emerald-400 font-medium" hx-get="/dashboard/partials/cashflow/net" hx-trigger="load" hx-swap="innerHTML">+$0</span>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-gray-400">Savings rate</span>
+                    <span class="text-white font-medium" hx-get="/dashboard/partials/cashflow/savings-rate" hx-trigger="load" hx-swap="innerHTML">0%</span>
+                </div>
             </div>
         </div>
+
     </section>
 
-    <!-- Quick actions -->
-    <section aria-label="Quick actions" class="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <button
-            hx-post="/admin/sync/run"
-            hx-target="#sync-result"
-            hx-swap="innerHTML"
-            class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition text-left"
-        >
-            <p class="font-medium text-white">Sync Now</p>
-            <p class="text-sm text-gray-400 mt-1">Pull latest transactions</p>
-        </button>
-
-        <a href="/import/csv" class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition block">
-            <p class="font-medium text-white">Import CSV</p>
-            <p class="text-sm text-gray-400 mt-1">Upload bank statement</p>
-        </a>
-
-        <a href="/export" class="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:bg-gray-750 hover:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition block">
-            <p class="font-medium text-white">Export Data</p>
-            <p class="text-sm text-gray-400 mt-1">Full portability bundle</p>
-        </a>
-    </section>
-
-    <div id="sync-result" class="text-sm text-gray-400"></div>
 </div>
 {% endblock %}

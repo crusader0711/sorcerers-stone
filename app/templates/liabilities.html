@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% set active_page = "liabilities" %}
+{% block title %}Liabilities & Credit{% endblock %}
+{% block page_title %}Liabilities & credit{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-lg font-semibold text-white">Liabilities & credit</h1>
+            <p class="text-xs text-gray-500 mt-0.5">Every debt, secured and revolving · synced or manual per REQ-L2</p>
+        </div>
+        <button class="text-xs text-gray-400 hover:text-white border border-gray-700 rounded px-2.5 py-1 hover:border-gray-500 transition">+ Add liability</button>
+    </div>
+
+    <!-- ═══ KPI Cards ═════════════════════════════════════════════════════════ -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Total debt</p>
+            <p class="text-xl font-bold text-red-400">−$334,161</p>
+            <p class="text-[11px] text-emerald-400 mt-1">−$2,318 this month</p>
+        </div>
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Monthly debt service</p>
+            <p class="text-xl font-bold text-white">$2,643</p>
+            <p class="text-[11px] text-gray-400 mt-1">excl. cards paid in full</p>
+        </div>
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Blended APR</p>
+            <p class="text-xl font-bold text-white">4.9%</p>
+            <p class="text-[11px] text-gray-400 mt-1">weighted by balance</p>
+        </div>
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <p class="text-xs text-gray-500 mb-1">Debt-free ex-mortgage</p>
+            <p class="text-xl font-bold text-amber-400">Feb 2029</p>
+            <p class="text-[11px] text-gray-400 mt-1">at current pace</p>
+        </div>
+    </section>
+
+    <!-- ═══ Payoff Projection + Strategy ══════════════════════════════════════ -->
+    <section class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+        <!-- Payoff projection chart -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+            <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-white">Payoff projection</h2>
+                <div class="flex gap-2 text-[10px]">
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span>Total debt</span>
+                    <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Ex-mortgage</span>
+                </div>
+            </div>
+            <p class="text-[11px] text-gray-500 mb-3">Amortization at scheduled payments · no extra principal</p>
+            <div class="h-48 bg-gray-800/30 rounded flex items-center justify-center">
+                <canvas id="payoff-chart" aria-label="Payoff projection chart"></canvas>
+            </div>
+        </div>
+
+        <!-- Payoff strategy -->
+        <div class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5 space-y-4">
+            <div>
+                <h2 class="text-sm font-semibold text-white">Payoff strategy</h2>
+                <div class="flex gap-2 mt-2">
+                    <button class="text-[11px] px-3 py-1 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-700">Avalanche</button>
+                    <button class="text-[11px] px-3 py-1 rounded bg-gray-800 text-gray-400 hover:text-white hover:bg-gray-700 transition">Snowball</button>
+                </div>
+            </div>
+
+            <!-- Liability list -->
+            <div class="space-y-2" hx-get="/liabilities/partials/strategy-list" hx-trigger="load" hx-swap="innerHTML">
+                <p class="text-xs text-gray-500">Loading strategy...</p>
+            </div>
+
+            <!-- Interest saved -->
+            <div class="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+                <p class="text-xs text-gray-500">Interest saved vs minimums</p>
+                <p class="text-sm text-emerald-400 font-medium mt-1">With +$300/mo extra — <span class="text-white">free Jul 2028</span></p>
+            </div>
+        </div>
+
+    </section>
+
+    <!-- ═══ All Liabilities Table ═════════════════════════════════════════════ -->
+    <section class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-sm font-semibold text-white">All liabilities</h2>
+            <input type="search" placeholder="Filter..." class="text-xs bg-gray-800 border border-gray-700 rounded px-3 py-1.5 text-gray-300 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 w-48">
+        </div>
+        <div hx-get="/liabilities/partials/table" hx-trigger="load" hx-swap="innerHTML">
+            <p class="text-xs text-gray-500">Loading liabilities...</p>
+        </div>
+    </section>
+
+    <!-- ═══ Payment Schedule ══════════════════════════════════════════════════ -->
+    <section class="bg-[#1a1d27] rounded-xl border border-gray-800 p-5">
+        <h2 class="text-sm font-semibold text-white mb-4">Payment schedule · next 45 days</h2>
+        <div hx-get="/liabilities/partials/schedule" hx-trigger="load" hx-swap="innerHTML">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Due</th>
+                        <th>Liability</th>
+                        <th>Amount</th>
+                        <th>Method</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5" class="text-center text-gray-500 text-xs py-4">Loading schedule...</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
